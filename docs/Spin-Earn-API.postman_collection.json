@@ -1,0 +1,351 @@
+{
+  "info": {
+    "name": "Spin & Earn API",
+    "description": "Complete API collection for testing the Spin & Earn backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/healthz",
+          "host": ["{{baseUrl}}"],
+          "path": ["healthz"]
+        }
+      }
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                  "    pm.collectionVariables.set('userId', response.data.user._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"deviceInfo\": {\n    \"fingerprintHash\": \"abc123def456\",\n    \"model\": \"iPhone 14\",\n    \"os\": \"iOS 17.0\",\n    \"emulator\": false,\n    \"rooted\": false\n  },\n  \"referralCode\": \"ABC123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                  "    pm.collectionVariables.set('userId', response.data.user._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"deviceInfo\": {\n    \"fingerprintHash\": \"abc123def456\",\n    \"model\": \"iPhone 14\",\n    \"os\": \"iOS 17.0\",\n    \"emulator\": false,\n    \"rooted\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', response.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', response.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Request Magic Link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/magic-link",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "magic-link"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Spin & Rewards",
+      "item": [
+        {
+          "name": "Get Spin Prefetch",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spin/prefetch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "spin", "prefetch"]
+            }
+          }
+        },
+        {
+          "name": "Start Free Spin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('spinSignature', response.data.signature);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"free\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spin/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "spin", "start"]
+            }
+          }
+        },
+        {
+          "name": "Start Rewarded Spin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('spinSignature', response.data.signature);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"rewarded\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spin/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "spin", "start"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Free Spin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature\": \"{{spinSignature}}\",\n  \"method\": \"free\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spin/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "spin", "confirm"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Rewarded Spin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature\": \"{{spinSignature}}\",\n  \"method\": \"rewarded\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/spin/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "spin", "confirm"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdMob SSV",
+      "item": [
+        {
+          "name": "SSV Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"ad_unit_id\": \"ca-app-pub-6181092189054832/5533281634\",\n  \"reward_amount\": 5,\n  \"reward_type\": \"coins\",\n  \"timestamp\": \"2024-01-01T00:00:00.000Z\",\n  \"signature\": \"abc123def456...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ads/ssv",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ads", "ssv"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

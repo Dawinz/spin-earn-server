@@ -1,0 +1,721 @@
+openapi: 3.0.3
+info:
+  title: Spin & Earn API
+  description: |
+    A production-ready API for the Spin & Earn mobile application.
+    
+    ## Features
+    - Server-authoritative spin mechanics
+    - Anti-fraud protection
+    - AdMob integration with SSV
+    - Atomic wallet transactions
+    - Device fingerprinting
+    
+    ## Authentication
+    All endpoints except `/healthz` and `/auth/*` require a valid JWT token in the Authorization header:
+    ```
+    Authorization: Bearer <access_token>
+    ```
+  version: 1.0.0
+  contact:
+    name: Spin & Earn Team
+    email: support@spinandearn.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.spinandearn.com
+    description: Production server
+  - url: http://localhost:8080
+    description: Development server
+
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      description: Returns the health status of the API
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T00:00:00.000Z"
+
+  /api/v1/auth/register:
+    post:
+      summary: Register a new user
+      description: Creates a new user account with device binding
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - deviceInfo
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  example: "securepassword123"
+                deviceInfo:
+                  type: object
+                  required:
+                    - fingerprintHash
+                    - model
+                    - os
+                    - emulator
+                    - rooted
+                  properties:
+                    fingerprintHash:
+                      type: string
+                      example: "abc123def456"
+                    model:
+                      type: string
+                      example: "iPhone 14"
+                    os:
+                      type: string
+                      example: "iOS 17.0"
+                    emulator:
+                      type: boolean
+                      example: false
+                    rooted:
+                      type: boolean
+                      example: false
+                referralCode:
+                  type: string
+                  example: "ABC123"
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/login:
+    post:
+      summary: Login user
+      description: Authenticates user and returns access tokens
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - deviceInfo
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  example: "securepassword123"
+                deviceInfo:
+                  $ref: '#/components/schemas/DeviceInfo'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh access token
+      description: Generates new access token using refresh token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Logout user
+      description: Invalidates the current session
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/magic-link:
+    post:
+      summary: Request magic link
+      description: Sends a passwordless login link to user's email
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+      responses:
+        '200':
+          description: Magic link sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Magic link sent to your email"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/spin/prefetch:
+    get:
+      summary: Get spin status and configuration
+      description: Returns current spin availability, caps, and wheel configuration
+      tags: [Spin & Rewards]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Spin status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SpinPrefetchResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Account restricted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/spin/start:
+    post:
+      summary: Start a spin
+      description: Initiates a spin and returns outcome with signature
+      tags: [Spin & Rewards]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - method
+              properties:
+                method:
+                  type: string
+                  enum: [free, rewarded]
+                  example: "free"
+      responses:
+        '200':
+          description: Spin started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SpinResult'
+        '400':
+          description: Spin not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Account restricted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/spin/confirm:
+    post:
+      summary: Confirm spin and credit rewards
+      description: Verifies spin signature and credits rewards atomically
+      tags: [Spin & Rewards]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - signature
+                - method
+              properties:
+                signature:
+                  type: string
+                  example: "abc123def456..."
+                method:
+                  type: string
+                  enum: [free, rewarded]
+                  example: "free"
+      responses:
+        '200':
+          description: Spin confirmed and rewards credited
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      coins:
+                        type: number
+                        example: 10
+                      balanceAfter:
+                        type: number
+                        example: 150
+        '400':
+          description: Invalid signature or already processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Account restricted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/ads/ssv:
+    post:
+      summary: AdMob Server-Side Verification
+      description: Webhook for AdMob SSV to credit rewards for completed ads
+      tags: [AdMob]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - ad_unit_id
+                - timestamp
+                - signature
+              properties:
+                user_id:
+                  type: string
+                  example: "507f1f77bcf86cd799439011"
+                ad_unit_id:
+                  type: string
+                  example: "ca-app-pub-xxx/xxx"
+                reward_amount:
+                  type: number
+                  example: 5
+                reward_type:
+                  type: string
+                  example: "coins"
+                timestamp:
+                  type: string
+                  format: date-time
+                  example: "2024-01-01T00:00:00.000Z"
+                signature:
+                  type: string
+                  example: "abc123def456..."
+      responses:
+        '200':
+          description: Reward credited successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Reward granted successfully"
+                  data:
+                    type: object
+                    properties:
+                      coins:
+                        type: number
+                        example: 5
+                      balanceAfter:
+                        type: number
+                        example: 155
+        '400':
+          description: Invalid request or user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["user"]
+        referralCode:
+          type: string
+          example: "ABC123"
+        referredBy:
+          type: string
+          example: "XYZ789"
+        balances:
+          type: object
+          properties:
+            coins:
+              type: number
+              example: 150
+            gems:
+              type: number
+              example: 10
+        streak:
+          type: object
+          properties:
+            current:
+              type: number
+              example: 3
+            lastClaimDate:
+              type: string
+              format: date-time
+            longest:
+              type: number
+              example: 7
+        devicePrimaryId:
+          type: string
+          example: "abc123def456"
+        flags:
+          type: object
+          properties:
+            shadowBanned:
+              type: boolean
+              example: false
+            blocked:
+              type: boolean
+              example: false
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DeviceInfo:
+      type: object
+      required:
+        - fingerprintHash
+        - model
+        - os
+        - emulator
+        - rooted
+      properties:
+        fingerprintHash:
+          type: string
+          example: "abc123def456"
+        model:
+          type: string
+          example: "iPhone 14"
+        os:
+          type: string
+          example: "iOS 17.0"
+        emulator:
+          type: boolean
+          example: false
+        rooted:
+          type: boolean
+          example: false
+
+    SpinPrefetchResult:
+      type: object
+      properties:
+        canSpin:
+          type: boolean
+          example: true
+        cooldownRemaining:
+          type: number
+          example: 15
+        caps:
+          type: object
+          properties:
+            maxSpinsPerDay:
+              type: number
+              example: 50
+            minSecondsBetweenSpins:
+              type: number
+              example: 30
+            maxRewardedPerDay:
+              type: number
+              example: 20
+            dailyCoinCap:
+              type: number
+              example: 500
+        wheelConfig:
+          type: object
+          properties:
+            weights:
+              type: object
+              additionalProperties:
+                type: number
+              example:
+                "2": 30
+                "5": 25
+                "10": 20
+                "20": 15
+                "50": 7
+                "jackpot": 1
+                "bonusSpin": 1
+                "tryAgain": 1
+            outcomes:
+              type: array
+              items:
+                type: string
+              example: ["2", "5", "10", "20", "50", "jackpot", "bonusSpin", "tryAgain"]
+        userStats:
+          type: object
+          properties:
+            spinsToday:
+              type: number
+              example: 5
+            rewardedToday:
+              type: number
+              example: 2
+            coinsEarnedToday:
+              type: number
+              example: 45
+
+    SpinResult:
+      type: object
+      properties:
+        outcome:
+          type: string
+          example: "10"
+        coins:
+          type: number
+          example: 10
+        signature:
+          type: string
+          example: "abc123def456..."
+        nextSpinTime:
+          type: number
+          example: 1704067200
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Invalid request"
+            stack:
+              type: string
+              example: "Error: Invalid request\n    at..."
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Spin & Rewards
+    description: Spin wheel mechanics and reward system
+  - name: AdMob
+    description: AdMob integration and SSV
