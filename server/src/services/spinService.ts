@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import crypto from 'crypto';
 import moment from 'moment';
 import User from '../models/User.js';

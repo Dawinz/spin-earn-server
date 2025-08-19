@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import dotenv from 'dotenv';
 import connectDB from '../config/database.js';
 import Config from '../models/Config.js';

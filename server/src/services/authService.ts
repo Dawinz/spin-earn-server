@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
