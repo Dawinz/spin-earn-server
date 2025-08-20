@@ -14,6 +14,12 @@ import logger from './utils/logger.js';
 import authRoutes from './routes/auth.js';
 import spinRoutes from './routes/spin.js';
 import adsRoutes from './routes/ads.js';
+import devicesRoutes from './routes/devices.js';
+import walletRoutes from './routes/wallet.js';
+import withdrawalsRoutes from './routes/withdrawals.js';
+import streakRoutes from './routes/streak.js';
+import referralsRoutes from './routes/referrals.js';
+import adminRoutes from './routes/admin.js';
 
 const app = express();
 
@@ -39,6 +45,29 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Rate limiting
 app.use('/api/', apiLimiter);
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Spin & Earn API',
+    version: '1.0.0',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/healthz',
+      auth: '/api/v1/auth',
+      spin: '/api/v1/spin',
+      ads: '/api/v1/ads',
+      devices: '/api/v1/devices',
+      wallet: '/api/v1/wallet',
+      withdrawals: '/api/v1/withdrawals',
+      streak: '/api/v1/streak',
+      referrals: '/api/v1/referrals',
+      admin: '/api/v1/admin'
+    },
+    documentation: '/docs'
+  });
+});
+
 // Health check endpoint
 app.get('/healthz', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -48,6 +77,12 @@ app.get('/healthz', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/spin', spinRoutes);
 app.use('/api/v1/ads', adsRoutes);
+app.use('/api/v1/devices', devicesRoutes);
+app.use('/api/v1/wallet', walletRoutes);
+app.use('/api/v1/withdrawals', withdrawalsRoutes);
+app.use('/api/v1/streak', streakRoutes);
+app.use('/api/v1/referrals', referralsRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

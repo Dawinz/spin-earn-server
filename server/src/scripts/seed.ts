@@ -1,120 +1,200 @@
 /// <reference types="node" />
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import connectDB from '../config/database.js';
-import Config from '../models/Config.js';
-import logger from '../utils/logger.js';
+import User from '../models/User.js';
+import WithdrawalRequest from '../models/WithdrawalRequest.js';
+import SpinSession from '../models/SpinSession.js';
+import WalletTx from '../models/WalletTx.js';
+import bcrypt from 'bcryptjs';
 
 // Load environment variables
 dotenv.config();
 
-// Set default environment variables if not present
-if (!process.env.NODE_ENV) process.env.NODE_ENV = 'development';
-if (!process.env.PORT) process.env.PORT = '8080';
+if (!process.env.MONGODB_URI) {
+  console.error('MONGODB_URI is required');
+  process.exit(1);
+}
+
 if (!process.env.BASE_URL) process.env.BASE_URL = 'http://localhost:8080';
-if (!process.env.MONGODB_URI) process.env.MONGODB_URI = 'mongodb+srv://dawinibra:CSU6i05mC6HgPwdf@spinandearn.nftuswu.mongodb.net/?retryWrites=true&w=majority&appName=spinandearn';
-if (!process.env.JWT_ACCESS_SECRET) process.env.JWT_ACCESS_SECRET = 'your-super-secret-access-key-change-in-production-32-chars';
-if (!process.env.JWT_REFRESH_SECRET) process.env.JWT_REFRESH_SECRET = 'your-super-secret-refresh-key-change-in-production-32-chars';
-if (!process.env.JWT_ACCESS_TTL) process.env.JWT_ACCESS_TTL = '15m';
-if (!process.env.JWT_REFRESH_TTL) process.env.JWT_REFRESH_TTL = '30d';
-if (!process.env.ALLOWED_ORIGINS) process.env.ALLOWED_ORIGINS = 'http://localhost:3000,http://localhost:8081,https://your-admin-domain.com';
-if (!process.env.SSV_SHARED_SECRET) process.env.SSV_SHARED_SECRET = 'your-ssv-shared-secret-change-in-production';
-if (!process.env.RATE_WINDOW_SECONDS) process.env.RATE_WINDOW_SECONDS = '60';
-if (!process.env.RATE_MAX_ACTIONS) process.env.RATE_MAX_ACTIONS = '120';
-if (!process.env.ADMOB_ANDROID_APP_ID) process.env.ADMOB_ANDROID_APP_ID = 'ca-app-pub-6181092189054832~2340148251';
-if (!process.env.ADMOB_ANDROID_REWARDED_ID) process.env.ADMOB_ANDROID_REWARDED_ID = 'ca-app-pub-6181092189054832/5533281634';
-if (!process.env.ADMOB_ANDROID_INTERSTITIAL_ID) process.env.ADMOB_ANDROID_INTERSTITIAL_ID = 'ca-app-pub-6181092189054832/5634156310';
-if (!process.env.ADMOB_ANDROID_BANNER_ID) process.env.ADMOB_ANDROID_BANNER_ID = 'ca-app-pub-6181092189054832/2199691226';
-if (!process.env.ADMOB_ANDROID_NATIVE_ID) process.env.ADMOB_ANDROID_NATIVE_ID = 'ca-app-pub-6181092189054832/5947364546';
-if (!process.env.ADMOB_IOS_APP_ID) process.env.ADMOB_IOS_APP_ID = 'ca-app-pub-6181092189054832~9363047132';
-if (!process.env.ADMOB_IOS_REWARDED_ID) process.env.ADMOB_IOS_REWARDED_ID = 'ca-app-pub-6181092189054832/6279263382';
-if (!process.env.ADMOB_IOS_INTERSTITIAL_ID) process.env.ADMOB_IOS_INTERSTITIAL_ID = 'ca-app-pub-6181092189054832/1975419817';
-if (!process.env.ADMOB_IOS_BANNER_ID) process.env.ADMOB_IOS_BANNER_ID = 'ca-app-pub-6181092189054832/3604713177';
-if (!process.env.ADMOB_IOS_NATIVE_ID) process.env.ADMOB_IOS_NATIVE_ID = 'ca-app-pub-6181092189054832/4774610025';
 
-const spinEarnPolicy = {
-  rewards: {
-    spin: {
-      base: 1,
-      min: 1,
-      max: 100
-    },
-    jackpot: 100,
-    streak: [
-      5,   // Day 1
-      10,  // Day 2
-      15,  // Day 3
-      20,  // Day 4
-      25,  // Day 5
-      30,  // Day 6
-      50   // Day 7
-    ],
-    referral: {
-      inviter: 50,
-      invitee: 25,
-      qualifyAfterCoins: 100
-    }
-  },
-  caps: {
-    maxSpinsPerDay: 50,
-    minSecondsBetweenSpins: 30,
-    maxRewardedPerDay: 20,
-    dailyCoinCap: 500
-  },
-  wheelWeights: {
-    "2": 30,        // 30% chance
-    "5": 25,        // 25% chance
-    "10": 20,       // 20% chance
-    "20": 15,       // 15% chance
-    "50": 7,        // 7% chance
-    "jackpot": 1,   // 1% chance
-    "bonusSpin": 1, // 1% chance
-    "tryAgain": 1   // 1% chance
-  },
-  withdrawals: {
-    min: 1000,
-    fee: 0.05, // 5% fee
-    cooldownHours: 24
-  },
-  security: {
-    allowEmulators: false,
-    rootedPenalty: 0.5, // 50% penalty for rooted devices
-    ipVelocityWindowSec: 3600, // 1 hour
-    maxActionsPerWindow: 100
-  }
-};
-
-async function seedDatabase() {
+async function seed() {
   try {
-    logger.info('Starting database seeding...');
+    console.log('🌱 Starting database seed...');
     
-    // Connect to database
-    await connectDB();
-    
-    // Check if config already exists
-    const existingConfig = await Config.findOne({ key: 'spin_earn_policy' });
-    
-    if (existingConfig) {
-      logger.info('spin_earn_policy config already exists, updating...');
-      existingConfig.json = spinEarnPolicy;
-      await existingConfig.save();
-      logger.info('spin_earn_policy config updated successfully');
-    } else {
-      logger.info('Creating spin_earn_policy config...');
-      const config = new Config({
-        key: 'spin_earn_policy',
-        json: spinEarnPolicy
+    // Connect to MongoDB
+    await mongoose.connect(process.env.MONGODB_URI!);
+    console.log('✅ Connected to MongoDB');
+
+    // Clear existing data (optional - comment out if you want to keep existing data)
+    // await User.deleteMany({});
+    // await WithdrawalRequest.deleteMany({});
+    // await SpinSession.deleteMany({});
+    // await WalletTx.deleteMany({});
+    // console.log('🧹 Cleared existing data');
+
+    // Create admin user if it doesn't exist
+    const adminExists = await User.findOne({ email: 'admin@spinearn.com' });
+    if (!adminExists) {
+      const adminPasswordHash = await bcrypt.hash('admin123', 12);
+      const adminUser = new User({
+        email: 'admin@spinearn.com',
+        passwordHash: adminPasswordHash,
+        roles: ['admin'],
+        referralCode: 'ADMIN001',
+        balances: { coins: 0, gems: 0 },
+        streak: { current: 0, longest: 0 },
+        flags: { shadowBanned: false, blocked: false }
       });
-      await config.save();
-      logger.info('spin_earn_policy config created successfully');
+      await adminUser.save();
+      console.log('👑 Created admin user');
+    } else {
+      console.log('👑 Admin user already exists');
     }
+
+    // Create test users
+    const testUsers = [
+      {
+        email: 'john@example.com',
+        password: 'user123',
+        coins: 2500,
+        streak: 7,
+        referralCode: 'JOHN001'
+      },
+      {
+        email: 'sarah@example.com',
+        password: 'user123',
+        coins: 1800,
+        streak: 3,
+        referralCode: 'SARAH001'
+      },
+      {
+        email: 'mike@example.com',
+        password: 'user123',
+        coins: 4200,
+        streak: 12,
+        referralCode: 'MIKE001'
+      },
+      {
+        email: 'lisa@example.com',
+        password: 'user123',
+        coins: 450,
+        streak: 1,
+        referralCode: 'LISA001'
+      },
+      {
+        email: 'alex@example.com',
+        password: 'user123',
+        coins: 3200,
+        streak: 15,
+        referralCode: 'ALEX001'
+      },
+      {
+        email: 'emma@example.com',
+        password: 'user123',
+        coins: 780,
+        streak: 5,
+        referralCode: 'EMMA001'
+      }
+    ];
+
+    for (const userData of testUsers) {
+      const existingUser = await User.findOne({ email: userData.email });
+      if (!existingUser) {
+        const passwordHash = await bcrypt.hash(userData.password, 12);
+        const user = new User({
+          email: userData.email,
+          passwordHash,
+          roles: ['user'],
+          referralCode: userData.referralCode,
+          balances: { coins: userData.coins, gems: 0 },
+          streak: { current: userData.streak, longest: userData.streak },
+          flags: { shadowBanned: false, blocked: false }
+        });
+        await user.save();
+        console.log(`👤 Created user: ${userData.email}`);
+      } else {
+        console.log(`👤 User already exists: ${userData.email}`);
+      }
+    }
+
+    // Create test withdrawal requests
+    const users = await User.find({ roles: 'user' }).limit(5);
     
-    logger.info('Database seeding completed successfully');
-    process.exit(0);
+    for (let i = 0; i < users.length; i++) {
+      const user = users[i];
+      const existingWithdrawal = await WithdrawalRequest.findOne({ userId: user._id });
+      
+      if (!existingWithdrawal) {
+        const withdrawal = new WithdrawalRequest({
+          userId: user._id,
+          amount: Math.floor(Math.random() * 2000) + 500, // Random amount between 500-2500
+          method: ['PayPal', 'Bank Transfer', 'PayPal'][Math.floor(Math.random() * 3)],
+          accountInfo: `${user.email.split('@')[0]}@paypal.com`,
+          status: ['pending', 'pending', 'pending', 'approved', 'rejected'][Math.floor(Math.random() * 5)],
+          notes: Math.random() > 0.7 ? 'Test withdrawal request' : undefined
+        });
+        await withdrawal.save();
+        console.log(`💰 Created withdrawal request for: ${user.email}`);
+      }
+    }
+
+    // Create some test spin sessions
+    for (const user of users) {
+      const spinCount = Math.floor(Math.random() * 20) + 5; // 5-25 spins per user
+      
+      for (let i = 0; i < spinCount; i++) {
+        const spin = new SpinSession({
+          userId: user._id,
+          method: Math.random() > 0.7 ? 'rewarded' : 'free',
+          outcome: ['2', '5', '10', '20', '50', 'jackpot', 'bonusSpin', 'tryAgain'][Math.floor(Math.random() * 8)],
+          coins: Math.floor(Math.random() * 50) + 1,
+          signature: `spin_${user._id}_${Date.now()}_${i}`,
+          ipAddress: '127.0.0.1',
+          userAgent: 'Test User Agent'
+        });
+        await spin.save();
+      }
+      console.log(`🎰 Created ${spinCount} spin sessions for: ${user.email}`);
+    }
+
+    // Create some wallet transactions
+    for (const user of users) {
+      const txCount = Math.floor(Math.random() * 10) + 3; // 3-13 transactions per user
+      let currentBalance = user.balances.coins;
+      
+      for (let i = 0; i < txCount; i++) {
+        const amount = Math.floor(Math.random() * 100) + 10;
+        const type = Math.random() > 0.5 ? 'credit' : 'debit';
+        
+        if (type === 'credit') {
+          currentBalance += amount;
+        } else {
+          currentBalance = Math.max(0, currentBalance - amount);
+        }
+        
+        const tx = new WalletTx({
+          userId: user._id,
+          type,
+          amount,
+          balanceAfter: currentBalance,
+          origin: ['spin', 'streak', 'referral', 'admin'][Math.floor(Math.random() * 4)]
+        });
+        await tx.save();
+      }
+      console.log(`💳 Created ${txCount} wallet transactions for: ${user.email}`);
+    }
+
+    console.log('🎉 Database seeding completed successfully!');
+    console.log(`📊 Created ${users.length} test users with spins and withdrawals`);
+    
   } catch (error) {
-    logger.error('Error seeding database:', error);
+    console.error('❌ Error seeding database:', error);
     process.exit(1);
+  } finally {
+    await mongoose.disconnect();
+    console.log('🔌 Disconnected from MongoDB');
   }
 }
 
 // Run the seed function
-seedDatabase();
+seed();

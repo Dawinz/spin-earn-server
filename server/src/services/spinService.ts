@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import moment from 'moment';
 import User from '../models/User.js';
 import SpinSession from '../models/SpinSession.js';

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import User, { IUser } from '../models/User.js';
 import Device from '../models/Device.js';
@@ -157,7 +157,7 @@ export class AuthService {
       const device = new Device({
         userId,
         fingerprintHash,
-        model,
+        deviceModel: model,
         os,
         emulator,
         rooted,

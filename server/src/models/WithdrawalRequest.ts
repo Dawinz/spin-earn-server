@@ -4,6 +4,7 @@ export interface IWithdrawalRequest extends Document {
   userId: mongoose.Types.ObjectId;
   amount: number;
   method: string;
+  accountInfo?: string;
   status: 'pending' | 'approved' | 'rejected';
   notes?: string;
   processedBy?: mongoose.Types.ObjectId;
@@ -26,6 +27,9 @@ const withdrawalRequestSchema = new Schema<IWithdrawalRequest>({
   method: {
     type: String,
     required: true
+  },
+  accountInfo: {
+    type: String
   },
   status: {
     type: String,

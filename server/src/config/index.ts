@@ -33,7 +33,7 @@ const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.PORT || '8080',
   BASE_URL: process.env.BASE_URL || 'http://localhost:8080',
-  MONGODB_URI: process.env.MONGODB_URI || 'mongodb+srv://dawinibra:CSU6i05mC6HgPwdf@spinandearn.nftuswu.mongodb.net/?retryWrites=true&w=majority&appName=spinandearn',
+                MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/spin-earn',
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'your-super-secret-access-key-change-in-production-32-chars',
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key-change-in-production-32-chars',
   JWT_ACCESS_TTL: process.env.JWT_ACCESS_TTL || '15m',

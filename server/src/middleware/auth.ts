@@ -7,8 +7,9 @@ import { ApiError } from '../utils/errors.js';
 export interface AuthRequest extends Request {
   user?: any;
   body: any;
-  ip?: string;
-  get(name: string): string | undefined;
+  query: any;
+  params: any;
+  headers: any;
 }
 
 export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

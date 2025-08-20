@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import User from '../models/User.js';
 import RewardGrant from '../models/RewardGrant.js';
 import WalletTx from '../models/WalletTx.js';
@@ -32,13 +32,17 @@ export class AdsController {
         throw new UnauthorizedError('Invalid SSV signature');
       }
 
-      // Verify ad unit ID matches our configuration
+      // Verify ad unit ID against allowlist
       const validAdUnitIds = [
         config.ADMOB_ANDROID_REWARDED_ID,
         config.ADMOB_IOS_REWARDED_ID
       ];
 
       if (!validAdUnitIds.includes(ad_unit_id)) {
+        logger.warn('Invalid ad unit ID in SSV webhook', { 
+          adUnitId: ad_unit_id, 
+          validIds: validAdUnitIds 
+        });
         throw new ValidationError('Invalid ad unit ID');
       }
 
