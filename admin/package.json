@@ -2,6 +2,7 @@
   "name": "spin-earn-admin",
   "version": "1.0.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@types/node": "^20.10.5",
     "@types/react": "^18.2.45",
