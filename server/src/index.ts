@@ -27,10 +27,12 @@ connectDB();
 // Security middleware
 app.use(helmet());
 
-// CORS
+// CORS - Allow all origins in development
 app.use(cors({
-  origin: config.ALLOWED_ORIGINS,
-  credentials: true
+  origin: true, // Allow all origins for development
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Compression

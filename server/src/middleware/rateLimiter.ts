@@ -20,10 +20,6 @@ export const adminLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting for admin users
-    return req.path.startsWith('/api/v1/admin') && req.user?.isAdmin;
-  }
 });
 
 // Very lenient rate limiter for configuration updates
