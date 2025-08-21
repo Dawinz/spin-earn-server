@@ -25,12 +25,20 @@ const generateTokens = (userId: string) => {
 // Register new user
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, referralCode } = req.body;
+    const { email, password, referralCode, isAdmin, secretKey } = req.body;
     
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
+    }
+    
+    // Check admin creation with secret key
+    if (isAdmin) {
+      const ADMIN_SECRET = process.env.ADMIN_SECRET || 'spin-earn-admin-2024';
+      if (secretKey !== ADMIN_SECRET) {
+        return res.status(403).json({ error: 'Invalid secret key for admin creation' });
+      }
     }
     
     // Generate unique referral code
@@ -51,7 +59,8 @@ export const register = async (req: Request, res: Response) => {
       password,
       referralCode: userReferralCode,
       referredBy,
-      isEmailVerified: true // For now, skip email verification
+      isEmailVerified: true, // For now, skip email verification
+      isAdmin: isAdmin || false
     });
     
     await user.save();

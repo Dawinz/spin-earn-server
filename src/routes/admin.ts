@@ -2,7 +2,6 @@ import express from 'express';
 import { getUsers, getWithdrawals, getAnalytics, updateUserStatus, getDailyStats, getConfig, updateConfig } from '../controllers/adminController.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { configLimiter } from '../middleware/rateLimiter.js';
-import User from '../models/User.js';
 
 const router = express.Router();
 
@@ -17,31 +16,15 @@ router.post('/create-admin', async (req, res) => {
       return res.status(403).json({ error: 'Invalid secret key' });
     }
     
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
-    }
+    // Use the auth controller's register function with admin flag
+    const { register } = await import('../controllers/authController.js');
     
-    // Create admin user
-    const adminUser = new User({
-      email,
-      password,
-      isAdmin: true,
-      isEmailVerified: true,
-      referralCode: Math.random().toString(36).substring(2, 10).toUpperCase()
-    });
+    // Modify the request to include admin flag
+    req.body.isAdmin = true;
+    req.body.secretKey = secretKey;
     
-    await adminUser.save();
-    
-    res.json({ 
-      message: 'Admin user created successfully',
-      user: {
-        id: adminUser._id,
-        email: adminUser.email,
-        isAdmin: adminUser.isAdmin
-      }
-    });
+    // Call the register function
+    await register(req, res);
     
   } catch (error) {
     res.status(500).json({ error: 'Failed to create admin user', details: error.message });
