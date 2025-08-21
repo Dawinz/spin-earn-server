@@ -168,13 +168,32 @@ const Config: React.FC = () => {
   };
 
   const updateConfigValue = (sectionKey: string, fieldKey: string, value: any) => {
-    setConfigs(prev => ({
-      ...prev,
-      [sectionKey]: {
-        ...prev[sectionKey],
-        [fieldKey]: value
+    setConfigs(prev => {
+      const currentSection = prev[sectionKey] || {};
+      
+      // Handle nested field keys like 'spin.base' or 'referral.inviter'
+      if (fieldKey.includes('.')) {
+        const [parentKey, childKey] = fieldKey.split('.');
+        return {
+          ...prev,
+          [sectionKey]: {
+            ...currentSection,
+            [parentKey]: {
+              ...currentSection[parentKey],
+              [childKey]: value
+            }
+          }
+        };
+      } else {
+        return {
+          ...prev,
+          [sectionKey]: {
+            ...currentSection,
+            [fieldKey]: value
+          }
+        };
       }
-    }));
+    });
   };
 
   const saveConfig = async (sectionKey: string) => {
@@ -242,7 +261,14 @@ const Config: React.FC = () => {
   };
 
   const renderField = (sectionKey: string, field: ConfigField) => {
-    const value = configs[sectionKey]?.[field.key];
+    // Handle nested field access like 'spin.base'
+    let value;
+    if (field.key.includes('.')) {
+      const [parentKey, childKey] = field.key.split('.');
+      value = configs[sectionKey]?.[parentKey]?.[childKey];
+    } else {
+      value = configs[sectionKey]?.[field.key];
+    }
     
     switch (field.type) {
       case 'number':
