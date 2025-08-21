@@ -13,12 +13,14 @@ The Vercel deployment issue has been resolved! Here's how to deploy correctly:
 
 ### **2. Configure Project Settings**
 ```
-Framework Preset: Create React App
-Root Directory: admin
-Build Command: npm run build
-Output Directory: build
-Install Command: npm install
+Framework Preset: Other
+Root Directory: (leave empty - use root)
+Build Command: (leave empty - auto-detected)
+Output Directory: (leave empty - auto-detected)
+Install Command: (leave empty - auto-detected)
 ```
+
+**Important:** The `vercel.json` file in the root directory will handle all the configuration automatically.
 
 ### **3. Environment Variables**
 Add this environment variable:
@@ -38,17 +40,17 @@ REACT_APP_API_URL=https://your-render-backend.onrender.com/api/v1
 - Build failed with "Could not find a required file"
 
 ### **Solution Applied:**
-- ✅ Added `admin/vercel.json` configuration
-- ✅ Specified correct build settings
-- ✅ Set proper output directory
-- ✅ Configured for Create React App framework
+- ✅ Added root `vercel.json` configuration
+- ✅ Specified `admin/package.json` as build source
+- ✅ Set proper output directory to `build`
+- ✅ Configured routes to serve from admin build
 
 ## 📁 **File Structure**
 ```
 spin-and-earn-system/
+├── vercel.json              ← Vercel config (root)
 ├── admin/
-│   ├── vercel.json          ← Vercel config
-│   ├── package.json
+│   ├── package.json         ← Build source
 │   ├── public/
 │   │   └── index.html       ← Found here
 │   └── src/
@@ -71,9 +73,10 @@ spin-and-earn-system/
 ## 🚀 **Ready to Deploy**
 
 The configuration is now fixed and ready for deployment. Vercel will:
-1. ✅ Install dependencies in `/admin` directory
-2. ✅ Build the React app correctly
-3. ✅ Find `index.html` in the right location
-4. ✅ Deploy successfully
+1. ✅ Read `vercel.json` from root directory
+2. ✅ Install dependencies in `/admin` directory
+3. ✅ Build the React app from `admin/package.json`
+4. ✅ Find `index.html` in `admin/public/`
+5. ✅ Deploy successfully
 
 **Try deploying again - it should work now! 🎉**
