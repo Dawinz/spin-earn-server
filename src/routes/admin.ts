@@ -2,6 +2,7 @@ import express from 'express';
 import { getUsers, getWithdrawals, getAnalytics, updateUserStatus, getDailyStats, getConfig, updateConfig } from '../controllers/adminController.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { configLimiter } from '../middleware/rateLimiter.js';
+import User from '../models/User.js';
 
 const router = express.Router();
 
@@ -17,7 +18,6 @@ router.post('/create-admin', async (req, res) => {
     }
     
     // Check if user already exists
-    const User = (await import('../models/User.js')).default;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
