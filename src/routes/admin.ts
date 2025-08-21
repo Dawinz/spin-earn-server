@@ -52,4 +52,47 @@ router.post('/seed', async (req, res) => {
   }
 });
 
+// Create admin user endpoint (for initial setup)
+router.post('/create-admin', async (req, res) => {
+  try {
+    const { email, password, secretKey } = req.body;
+    
+    // Check secret key (you can set this in environment variables)
+    const ADMIN_SECRET = process.env.ADMIN_SECRET || 'spin-earn-admin-2024';
+    if (secretKey !== ADMIN_SECRET) {
+      return res.status(403).json({ error: 'Invalid secret key' });
+    }
+    
+    // Check if user already exists
+    const User = (await import('../models/User.js')).default;
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+    
+    // Create admin user
+    const adminUser = new User({
+      email,
+      password,
+      isAdmin: true,
+      isEmailVerified: true,
+      referralCode: Math.random().toString(36).substring(2, 10).toUpperCase()
+    });
+    
+    await adminUser.save();
+    
+    res.json({ 
+      message: 'Admin user created successfully',
+      user: {
+        id: adminUser._id,
+        email: adminUser.email,
+        isAdmin: adminUser.isAdmin
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create admin user', details: error.message });
+  }
+});
+
 export default router;
