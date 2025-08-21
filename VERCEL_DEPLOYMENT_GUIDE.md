@@ -20,7 +20,11 @@ Output Directory: (leave empty - auto-detected)
 Install Command: (leave empty - auto-detected)
 ```
 
-**Important:** The `vercel.json` file in the root directory will handle all the configuration automatically.
+**Important:** The `vercel.json` file will automatically:
+- Change to the `admin` directory
+- Install dependencies
+- Build the React app
+- Output to `admin/build`
 
 ### **3. Environment Variables**
 Add this environment variable:
@@ -41,9 +45,9 @@ REACT_APP_API_URL=https://your-render-backend.onrender.com/api/v1
 
 ### **Solution Applied:**
 - ✅ Added root `vercel.json` configuration
-- ✅ Specified `admin/package.json` as build source
-- ✅ Set proper output directory to `build`
-- ✅ Configured routes to serve from admin build
+- ✅ Used `cd admin && npm install` for installation
+- ✅ Used `cd admin && npm run build` for building
+- ✅ Set output directory to `admin/build`
 
 ## 📁 **File Structure**
 ```
@@ -74,9 +78,10 @@ spin-and-earn-system/
 
 The configuration is now fixed and ready for deployment. Vercel will:
 1. ✅ Read `vercel.json` from root directory
-2. ✅ Install dependencies in `/admin` directory
-3. ✅ Build the React app from `admin/package.json`
-4. ✅ Find `index.html` in `admin/public/`
-5. ✅ Deploy successfully
+2. ✅ Run `cd admin && npm install` to install dependencies
+3. ✅ Run `cd admin && npm run build` to build the app
+4. ✅ Find `index.html` in `admin/public/` (correct location)
+5. ✅ Output build files to `admin/build/`
+6. ✅ Deploy successfully
 
 **Try deploying again - it should work now! 🎉**
