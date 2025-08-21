@@ -1,5 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "./build.sh",
-  "outputDirectory": "admin/build"
+  "builds": [
+    {
+      "src": "admin/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ]
 }
