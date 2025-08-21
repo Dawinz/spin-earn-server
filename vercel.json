@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd admin && npm run build",
-  "outputDirectory": "admin/build",
-  "installCommand": "cd admin && npm install"
+  "buildCommand": "./build.sh",
+  "outputDirectory": "admin/build"
 }
