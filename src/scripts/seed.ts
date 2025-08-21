@@ -216,4 +216,10 @@ const seedDatabase = async () => {
   }
 };
 
-seedDatabase();
+// Export the function for use in other modules
+export { seedDatabase };
+
+// Run if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seedDatabase();
+}
