@@ -100,10 +100,22 @@ const seedDatabase = async () => {
         value: {
           spin: { base: 1, min: 1, max: 100 },
           jackpot: 100,
-          streak: [5, 10, 15, 20, 25, 30, 50],
           referral: { inviter: 50, invitee: 25, qualifyAfterCoins: 100 }
         },
         description: 'Game reward configuration',
+        isPublic: true
+      },
+      {
+        key: 'streaks',
+        value: {
+          bonusMultiplier: 1.5,
+          maxStreakDays: 7,
+          day1Bonus: 10,
+          day3Bonus: 25,
+          day7Bonus: 100,
+          day30Bonus: 500
+        },
+        description: 'Daily streak rewards and multipliers',
         isPublic: true
       },
       {
@@ -131,7 +143,9 @@ const seedDatabase = async () => {
         value: {
           min: 1000,
           fee: 0.05,
-          cooldownHours: 24
+          cooldownHours: 24,
+          maxPerDay: 3,
+          autoApproveLimit: 100
         },
         description: 'Withdrawal settings',
         isPublic: true
@@ -142,10 +156,39 @@ const seedDatabase = async () => {
           allowEmulators: false,
           rootedPenalty: 0.5,
           ipVelocityWindowSec: 3600,
-          maxActionsPerWindow: 100
+          maxActionsPerWindow: 100,
+          maxDevicesPerUser: 3,
+          suspiciousIpThreshold: 10
         },
         description: 'Security and anti-fraud settings',
         isPublic: false
+      },
+      {
+        key: 'email',
+        value: {
+          enabled: false,
+          smtpHost: 'smtp.gmail.com',
+          smtpPort: 587,
+          smtpUser: '',
+          smtpPass: '',
+          fromEmail: 'noreply@spinearn.com',
+          fromName: 'Spin & Earn'
+        },
+        description: 'Email notification settings',
+        isPublic: false
+      },
+      {
+        key: 'app',
+        value: {
+          maintenanceMode: false,
+          maintenanceMessage: 'We are currently performing maintenance. Please try again later.',
+          appVersion: '1.0.0',
+          minAppVersion: '1.0.0',
+          forceUpdate: false,
+          updateMessage: 'Please update to the latest version to continue using the app.'
+        },
+        description: 'App-wide settings and features',
+        isPublic: true
       }
     ];
     
