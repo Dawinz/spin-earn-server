@@ -1,30 +1,64 @@
-import { Router } from 'express';
-import { AdminController } from '../controllers/adminController.js';
-import { authenticateToken } from '../middleware/auth.js';
-import { adminMiddleware } from '../middleware/admin.js';
+import express from 'express';
+import { getUsers, getWithdrawals, getAnalytics, updateUserStatus, getDailyStats, getConfig, updateConfig } from '../controllers/adminController.js';
+import { requireAdmin } from '../middleware/auth.js';
 
-const router = Router();
+const router = express.Router();
 
-// Apply auth and admin middleware to all admin routes
-router.use(authenticateToken);
-router.use(adminMiddleware);
+// All admin routes require admin authentication
+router.use(requireAdmin);
 
-// User Management
-router.get('/users', AdminController.getUsers);
-router.post('/users/:userId/block', AdminController.blockUser);
-router.post('/users/:userId/unblock', AdminController.unblockUser);
+router.get('/users', getUsers);
+router.get('/withdrawals', getWithdrawals);
+router.get('/analytics', getAnalytics);
+router.get('/analytics/dashboard', getAnalytics); // Alias for dashboard
+router.get('/analytics/daily', getDailyStats); // Daily analytics
+router.put('/users/:userId/status', updateUserStatus);
 
-// Withdrawal Management
-router.get('/withdrawals', AdminController.getWithdrawals);
-router.post('/withdrawals/:withdrawalId/approve', AdminController.approveWithdrawal);
-router.post('/withdrawals/:withdrawalId/reject', AdminController.rejectWithdrawal);
+// Configuration routes
+router.get('/config/:key', getConfig);
+router.put('/config/:key', updateConfig);
 
-// Analytics
-router.get('/analytics/dashboard', AdminController.getDashboardStats);
-router.get('/analytics/daily', AdminController.getDailyStats);
+// Add missing endpoints that frontend expects
+router.post('/users/:userId/block', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await (await import('../models/User.js')).default.findByIdAndUpdate(
+      userId,
+      { isBlocked: true },
+      { new: true }
+    ).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      data: { user }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
-// Configuration
-router.get('/config/:key', AdminController.getConfig);
-router.put('/config/:key', AdminController.updateConfig);
+router.post('/users/:userId/unblock', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await (await import('../models/User.js')).default.findByIdAndUpdate(
+      userId,
+      { isBlocked: false },
+      { new: true }
+    ).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      data: { user }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 export default router;

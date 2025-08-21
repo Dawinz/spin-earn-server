@@ -1,25 +1,16 @@
-import { Router } from 'express';
-import { AuthController, registerValidation, loginValidation } from '../controllers/authController.js';
-import { authLimiter } from '../middleware/rateLimiter.js';
+import express from 'express';
+import { register, login, getProfile, refreshToken, logout } from '../controllers/authController.js';
+import { authenticateToken } from '../middleware/auth.js';
 
-const router = Router();
+const router = express.Router();
 
-// POST /auth/register
-router.post('/register', authLimiter, registerValidation, AuthController.register);
+// Public routes
+router.post('/register', register);
+router.post('/login', login);
+router.post('/refresh', refreshToken);
 
-// POST /auth/login
-router.post('/login', authLimiter, loginValidation, AuthController.login);
-
-// POST /auth/refresh
-router.post('/refresh', AuthController.refreshToken);
-
-// POST /auth/logout
-router.post('/logout', AuthController.logout);
-
-// POST /auth/magic-link
-router.post('/magic-link', authLimiter, AuthController.magicLink);
-
-// POST /auth/verify-magic-link
-router.post('/verify-magic-link', AuthController.verifyMagicLink);
+// Protected routes
+router.get('/profile', authenticateToken, getProfile);
+router.post('/logout', authenticateToken, logout);
 
 export default router;

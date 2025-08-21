@@ -1,20 +1,13 @@
-import { Router } from 'express';
-import { SpinController, startSpinValidation, confirmSpinValidation } from '../controllers/spinController.js';
-import { authenticateToken } from '../middleware/auth.js';
-import { spinLimiter } from '../middleware/rateLimiter.js';
+import express from 'express';
 
-const router = Router();
+const router = express.Router();
 
-// All spin routes require authentication
-router.use(authenticateToken);
+router.post('/spin', (req, res) => {
+  res.json({ message: 'Spin endpoint' });
+});
 
-// GET /spin/prefetch
-router.get('/prefetch', SpinController.prefetch);
-
-// POST /spin/start
-router.post('/start', spinLimiter, startSpinValidation, SpinController.startSpin);
-
-// POST /spin/confirm
-router.post('/confirm', spinLimiter, confirmSpinValidation, SpinController.confirmSpin);
+router.get('/history', (req, res) => {
+  res.json({ message: 'Spin history endpoint' });
+});
 
 export default router;

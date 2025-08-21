@@ -1,17 +1,13 @@
-import { Router } from 'express';
-import { WalletController } from '../controllers/walletController.js';
-import { authenticateToken } from '../middleware/auth.js';
-import { apiLimiter } from '../middleware/rateLimiter.js';
+import express from 'express';
 
-const router = Router();
+const router = express.Router();
 
-// Apply authentication to all wallet routes
-router.use(authenticateToken);
+router.get('/balance', (req, res) => {
+  res.json({ message: 'Wallet balance endpoint' });
+});
 
-// GET /wallet - Get wallet balance and info
-router.get('/', apiLimiter, WalletController.getWallet);
-
-// GET /wallet/tx - Get transaction history
-router.get('/tx', apiLimiter, WalletController.getTransactions);
+router.get('/transactions', (req, res) => {
+  res.json({ message: 'Wallet transactions endpoint' });
+});
 
 export default router;

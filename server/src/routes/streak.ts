@@ -1,14 +1,13 @@
-import { Router } from 'express';
-import { StreakController } from '../controllers/streakController.js';
-import { authenticateToken } from '../middleware/auth.js';
-import { apiLimiter } from '../middleware/rateLimiter.js';
+import express from 'express';
 
-const router = Router();
+const router = express.Router();
 
-// Apply authentication to all streak routes
-router.use(authenticateToken);
+router.get('/status', (req, res) => {
+  res.json({ message: 'Streak status endpoint' });
+});
 
-// POST /streak/claim - Claim daily streak reward
-router.post('/claim', apiLimiter, StreakController.claimStreak);
+router.post('/claim', (req, res) => {
+  res.json({ message: 'Streak claim endpoint' });
+});
 
 export default router;

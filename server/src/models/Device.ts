@@ -1,13 +1,20 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IDevice extends Document {
-  userId: mongoose.Types.ObjectId;
-  fingerprintHash: string;
+  userId: Schema.Types.ObjectId;
+  deviceId: string;
+  deviceName: string;
   deviceModel: string;
   os: string;
-  emulator: boolean;
-  rooted: boolean;
-  lastIP: string;
+  osVersion: string;
+  appVersion: string;
+  ipAddress: string;
+  userAgent: string;
+  fingerprint: string;
+  isRooted: boolean;
+  isEmulator: boolean;
+  isTrusted: boolean;
+  lastSeen: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -18,29 +25,40 @@ const deviceSchema = new Schema<IDevice>({
     ref: 'User',
     required: true
   },
-  fingerprintHash: {
+  deviceId: {
     type: String,
     required: true
   },
-  deviceModel: {
+  deviceName: String,
+  deviceModel: String,
+  os: String,
+  osVersion: String,
+  appVersion: String,
+  ipAddress: {
     type: String,
     required: true
   },
-  os: {
+  userAgent: String,
+  fingerprint: {
     type: String,
-    required: true
+    required: true,
+    unique: true
   },
-  emulator: {
+  isRooted: {
     type: Boolean,
     default: false
   },
-  rooted: {
+  isEmulator: {
     type: Boolean,
     default: false
   },
-  lastIP: {
-    type: String,
-    required: true
+  isTrusted: {
+    type: Boolean,
+    default: false
+  },
+  lastSeen: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true
@@ -48,10 +66,10 @@ const deviceSchema = new Schema<IDevice>({
 
 // Indexes
 deviceSchema.index({ userId: 1 });
-deviceSchema.index({ fingerprintHash: 1 });
-deviceSchema.index({ userId: 1, fingerprintHash: 1 }, { unique: true });
-deviceSchema.index({ lastIP: 1 });
-deviceSchema.index({ emulator: 1 });
-deviceSchema.index({ rooted: 1 });
+deviceSchema.index({ fingerprint: 1 });
+deviceSchema.index({ ipAddress: 1 });
+deviceSchema.index({ deviceId: 1 });
+deviceSchema.index({ isRooted: 1 });
+deviceSchema.index({ isEmulator: 1 });
 
 export default mongoose.model<IDevice>('Device', deviceSchema);

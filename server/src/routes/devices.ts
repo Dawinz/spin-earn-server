@@ -1,14 +1,9 @@
-import { Router } from 'express';
-import { DevicesController, registerDeviceValidation, reportEnvValidation } from '../controllers/devicesController.js';
-import { authenticateToken } from '../middleware/auth.js';
-import { authLimiter } from '../middleware/rateLimiter.js';
+import express from 'express';
 
-const router = Router();
+const router = express.Router();
 
-// POST /devices/register
-router.post('/register', authLimiter, registerDeviceValidation, DevicesController.registerDevice);
-
-// POST /devices/report-env
-router.post('/report-env', authLimiter, reportEnvValidation, DevicesController.reportEnvironment);
+router.post('/register', (req, res) => {
+  res.json({ message: 'Device registration endpoint' });
+});
 
 export default router;

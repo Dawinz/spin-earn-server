@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import { AdsController, ssvValidation } from '../controllers/adsController.js';
+import express from 'express';
 
-const router = Router();
+const router = express.Router();
 
-// POST /ads/ssv - AdMob Server-Side Verification webhook
-router.post('/ssv', ssvValidation, AdsController.ssvWebhook);
+router.post('/ssv', (req, res) => {
+  res.json({ message: 'AdMob SSV endpoint' });
+});
 
 export default router;

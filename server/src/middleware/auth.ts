@@ -1,64 +1,59 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { jwtConfig } from '../config/index.js';
-import User from '../models/User.js';
-import { ApiError } from '../utils/errors.js';
+import config from '../config/index.js';
+import logger from '../utils/logger.js';
 
-export interface AuthRequest extends Request {
-  user?: any;
-  body: any;
-  query: any;
-  params: any;
-  headers: any;
+// Extend Request interface to include userId
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string;
+    }
+  }
 }
 
-export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
-
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    
     if (!token) {
-      throw new ApiError(401, 'Access token required');
+      return res.status(401).json({ error: 'Access token required' });
     }
-
-    const decoded = jwt.verify(token, jwtConfig.accessSecret) as any;
-    const user = await User.findById(decoded.userId).select('-passwordHash');
-
-    if (!user) {
-      throw new ApiError(401, 'User not found');
+    
+    // Verify token
+    const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET) as any;
+    
+    if (decoded.type !== 'access') {
+      return res.status(401).json({ error: 'Invalid token type' });
     }
-
-    if (user.flags.blocked) {
-      throw new ApiError(403, 'Account blocked');
-    }
-
-    req.user = user;
+    
+    // Add userId to request
+    req.userId = decoded.userId;
     next();
+    
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      next(new ApiError(401, 'Invalid token'));
-    } else {
-      next(error);
-    }
+    logger.error('Token verification error:', error);
+    return res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
 
-export const requireRole = (roles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      next(new ApiError(401, 'Authentication required'));
-      return;
-    }
-
-    const hasRole = req.user.roles.some((role: string) => roles.includes(role));
-    if (!hasRole) {
-      next(new ApiError(403, 'Insufficient permissions'));
-      return;
-    }
-
-    next();
-  };
+export const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // First authenticate the token
+    await authenticateToken(req, res, async () => {
+      // Check if user is admin
+      const User = (await import('../models/User.js')).default;
+      const user = await User.findById(req.userId);
+      
+      if (!user || !user.isAdmin) {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      next();
+    });
+  } catch (error) {
+    logger.error('Admin check error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 };
-
-export const requireAdmin = requireRole(['admin']);
-export const requireModerator = requireRole(['admin', 'moderator']);

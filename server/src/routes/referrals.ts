@@ -1,14 +1,13 @@
-import { Router } from 'express';
-import { ReferralsController, applyReferralValidation } from '../controllers/referralsController.js';
-import { authenticateToken } from '../middleware/auth.js';
-import { apiLimiter } from '../middleware/rateLimiter.js';
+import express from 'express';
 
-const router = Router();
+const router = express.Router();
 
-// Apply authentication to all referral routes
-router.use(authenticateToken);
+router.get('/code', (req, res) => {
+  res.json({ message: 'Referral code endpoint' });
+});
 
-// POST /referrals/apply - Apply referral code
-router.post('/apply', apiLimiter, applyReferralValidation, ReferralsController.applyReferral);
+router.get('/stats', (req, res) => {
+  res.json({ message: 'Referral stats endpoint' });
+});
 
 export default router;

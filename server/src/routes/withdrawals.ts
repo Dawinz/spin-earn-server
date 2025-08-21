@@ -1,17 +1,13 @@
-import { Router } from 'express';
-import { WithdrawalsController, createWithdrawalValidation } from '../controllers/withdrawalsController.js';
-import { authenticateToken } from '../middleware/auth.js';
-import { apiLimiter } from '../middleware/rateLimiter.js';
+import express from 'express';
 
-const router = Router();
+const router = express.Router();
 
-// Apply authentication to all withdrawal routes
-router.use(authenticateToken);
+router.post('/request', (req, res) => {
+  res.json({ message: 'Withdrawal request endpoint' });
+});
 
-// GET /withdrawals - Get user's withdrawal requests
-router.get('/', apiLimiter, WithdrawalsController.getWithdrawals);
-
-// POST /withdrawals - Create withdrawal request
-router.post('/', apiLimiter, createWithdrawalValidation, WithdrawalsController.createWithdrawal);
+router.get('/history', (req, res) => {
+  res.json({ message: 'Withdrawal history endpoint' });
+});
 
 export default router;

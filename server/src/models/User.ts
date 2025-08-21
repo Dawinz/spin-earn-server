@@ -1,32 +1,35 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import config from '../config/index.js';
 
 export interface IUser extends Document {
   email: string;
-  passwordHash: string;
-  roles: string[];
+  password?: string;
+  isEmailVerified: boolean;
+  emailVerificationToken?: string;
+  emailVerificationExpires?: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  magicLinkToken?: string;
+  magicLinkExpires?: Date;
+  isAdmin: boolean;
+  isBlocked: boolean;
+  isShadowBanned: boolean;
   referralCode: string;
-  referredBy?: string;
-  balances: {
-    coins: number;
-    gems?: number;
-  };
-  streak: {
-    current: number;
-    lastClaimDate?: Date;
-    longest: number;
-  };
-  devicePrimaryId?: string;
-  flags: {
-    shadowBanned: boolean;
-    blocked: boolean;
-  };
+  referredBy?: Schema.Types.ObjectId;
+  totalEarnings: number;
+  totalWithdrawn: number;
+  currentBalance: number;
+  dailySpinCount: number;
+  lastSpinDate?: Date;
+  streakDays: number;
+  lastStreakDate?: Date;
+  deviceCount: number;
+  lastLoginAt?: Date;
+  lastLoginIp?: string;
   createdAt: Date;
   updatedAt: Date;
-  
-  // Methods
   comparePassword(candidatePassword: string): Promise<boolean>;
-  generateReferralCode(): string;
 }
 
 const userSchema = new Schema<IUser>({
@@ -35,107 +38,116 @@ const userSchema = new Schema<IUser>({
     required: true,
     unique: true,
     lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+    trim: true
   },
-  passwordHash: {
+  password: {
     type: String,
-    required: true
+    required: false, // Optional for magic link auth
+    minlength: 6
   },
-  roles: {
-    type: [String],
-    default: ['user'],
-    enum: ['user', 'admin', 'moderator']
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: String,
+  emailVerificationExpires: Date,
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  magicLinkToken: String,
+  magicLinkExpires: Date,
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
+  isBlocked: {
+    type: Boolean,
+    default: false
+  },
+  isShadowBanned: {
+    type: Boolean,
+    default: false
   },
   referralCode: {
     type: String,
     required: true,
-    unique: true,
-    uppercase: true
+    unique: true
   },
   referredBy: {
-    type: String,
+    type: Schema.Types.ObjectId,
     ref: 'User'
   },
-  balances: {
-    coins: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    gems: {
-      type: Number,
-      default: 0,
-      min: 0
-    }
+  totalEarnings: {
+    type: Number,
+    default: 0
   },
-  streak: {
-    current: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    lastClaimDate: {
-      type: Date
-    },
-    longest: {
-      type: Number,
-      default: 0,
-      min: 0
-    }
+  totalWithdrawn: {
+    type: Number,
+    default: 0
   },
-  devicePrimaryId: {
-    type: String
+  currentBalance: {
+    type: Number,
+    default: 0
   },
-  flags: {
-    shadowBanned: {
-      type: Boolean,
-      default: false
-    },
-    blocked: {
-      type: Boolean,
-      default: false
-    }
-  }
+  dailySpinCount: {
+    type: Number,
+    default: 0
+  },
+  lastSpinDate: Date,
+  streakDays: {
+    type: Number,
+    default: 0
+  },
+  lastStreakDate: Date,
+  deviceCount: {
+    type: Number,
+    default: 0
+  },
+  lastLoginAt: Date,
+  lastLoginIp: String
 }, {
-  timestamps: true,
-      toJSON: {
-      transform: function(doc, ret) {
-        if ('passwordHash' in ret) {
-          delete (ret as any).passwordHash;
-        }
-        return ret;
-      }
-    }
+  timestamps: true
 });
 
 // Indexes
 userSchema.index({ email: 1 });
 userSchema.index({ referralCode: 1 });
-userSchema.index({ 'flags.shadowBanned': 1 });
-userSchema.index({ 'flags.blocked': 1 });
-userSchema.index({ createdAt: 1 });
+userSchema.index({ referredBy: 1 });
+userSchema.index({ isBlocked: 1 });
+userSchema.index({ isShadowBanned: 1 });
 
-// Methods
-userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.passwordHash);
-};
-
-userSchema.methods.generateReferralCode = function(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-};
-
-// Pre-save middleware
+// Hash password before saving
 userSchema.pre('save', async function(next) {
-  if (this.isModified('passwordHash')) {
-    // Password is already hashed in the service layer
+  if (!this.isModified('password') || !(this as any).password) {
+    return next();
   }
   
-  if (this.isNew && !this.referralCode) {
-    this.referralCode = this.generateReferralCode();
+  try {
+    const salt = await bcrypt.genSalt(config.BCRYPT_ROUNDS);
+    (this as any).password = await bcrypt.hash((this as any).password, salt);
+    next();
+  } catch (error) {
+    next(error as Error);
   }
-  
-  next();
 });
+
+// Compare password method
+userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  if (!(this as any).password) return false;
+  return bcrypt.compare(candidatePassword, (this as any).password);
+};
+
+// Reset daily spin count at midnight
+userSchema.methods.resetDailySpinCount = function() {
+  const now = new Date();
+  const lastSpin = this.lastSpinDate;
+  
+  if (!lastSpin || lastSpin.getDate() !== now.getDate() || 
+      lastSpin.getMonth() !== now.getMonth() || 
+      lastSpin.getFullYear() !== now.getFullYear()) {
+    this.dailySpinCount = 0;
+    return true;
+  }
+  return false;
+};
 
 export default mongoose.model<IUser>('User', userSchema);

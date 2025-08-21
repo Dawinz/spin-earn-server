@@ -1,14 +1,20 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ISpinSession extends Document {
-  userId: mongoose.Types.ObjectId;
-  method: 'free' | 'rewarded';
-  outcome: string;
-  coins: number;
-  signature: string;
+  userId: Schema.Types.ObjectId;
+  deviceId: string;
   ipAddress: string;
-  userAgent: string;
+  spinResult: {
+    segment: number;
+    reward: number;
+    multiplier: number;
+    isJackpot: boolean;
+  };
+  serverSignature: string;
+  timestamp: Date;
+  isValid: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const spinSessionSchema = new Schema<ISpinSession>({
@@ -17,21 +23,7 @@ const spinSessionSchema = new Schema<ISpinSession>({
     ref: 'User',
     required: true
   },
-  method: {
-    type: String,
-    enum: ['free', 'rewarded'],
-    required: true
-  },
-  outcome: {
-    type: String,
-    required: true
-  },
-  coins: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  signature: {
+  deviceId: {
     type: String,
     required: true
   },
@@ -39,19 +31,46 @@ const spinSessionSchema = new Schema<ISpinSession>({
     type: String,
     required: true
   },
-  userAgent: {
+  spinResult: {
+    segment: {
+      type: Number,
+      required: true
+    },
+    reward: {
+      type: Number,
+      required: true
+    },
+    multiplier: {
+      type: Number,
+      required: true,
+      default: 1
+    },
+    isJackpot: {
+      type: Boolean,
+      default: false
+    }
+  },
+  serverSignature: {
     type: String,
     required: true
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now
+  },
+  isValid: {
+    type: Boolean,
+    default: true
   }
 }, {
-  timestamps: { createdAt: true, updatedAt: false }
+  timestamps: true
 });
 
 // Indexes
-spinSessionSchema.index({ userId: 1, createdAt: -1 });
-spinSessionSchema.index({ userId: 1, method: 1, createdAt: -1 });
-spinSessionSchema.index({ signature: 1 }, { unique: true });
-spinSessionSchema.index({ ipAddress: 1, createdAt: -1 });
-spinSessionSchema.index({ createdAt: -1 });
+spinSessionSchema.index({ userId: 1 });
+spinSessionSchema.index({ deviceId: 1 });
+spinSessionSchema.index({ ipAddress: 1 });
+spinSessionSchema.index({ timestamp: 1 });
+spinSessionSchema.index({ serverSignature: 1 });
 
 export default mongoose.model<ISpinSession>('SpinSession', spinSessionSchema);

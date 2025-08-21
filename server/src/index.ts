@@ -1,5 +1,3 @@
-/// <reference types="node" />
-import 'express-async-errors';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -63,8 +61,7 @@ app.get('/', (req, res) => {
       streak: '/api/v1/streak',
       referrals: '/api/v1/referrals',
       admin: '/api/v1/admin'
-    },
-    documentation: '/docs'
+    }
   });
 });
 

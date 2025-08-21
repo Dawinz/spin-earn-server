@@ -1,183 +1,231 @@
-import { Request, Response, NextFunction } from 'express';
-import { body, validationResult } from 'express-validator';
-import { AuthService } from '../services/authService.js';
-import { AuthRequest } from '../middleware/auth.js';
-import { ValidationError } from '../utils/errors.js';
+import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import User from '../models/User.js';
+import config from '../config/index.js';
 import logger from '../utils/logger.js';
 
-export class AuthController {
-  static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        const firstError = errors.array()[0];
-        throw new ValidationError(firstError?.msg || 'Validation failed');
+// Generate JWT tokens
+const generateTokens = (userId: string) => {
+  const accessToken = jwt.sign(
+    { userId, type: 'access' },
+    config.JWT_ACCESS_SECRET,
+    { expiresIn: '15m' }
+  );
+  
+  const refreshToken = jwt.sign(
+    { userId, type: 'refresh' },
+    config.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
+  );
+  
+  return { accessToken, refreshToken };
+};
+
+// Register new user
+export const register = async (req: Request, res: Response) => {
+  try {
+    const { email, password, referralCode } = req.body;
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+    
+    // Generate unique referral code
+    const userReferralCode = uuidv4().substring(0, 8).toUpperCase();
+    
+    // Check if referred by someone
+    let referredBy = null;
+    if (referralCode) {
+      const referrer = await User.findOne({ referralCode });
+      if (referrer) {
+        referredBy = referrer._id;
       }
-
-      const { email, password, deviceInfo, referralCode } = req.body;
-
-      const result = await AuthService.register({
-        email,
-        password,
-        deviceInfo: {
-          ...deviceInfo,
-          ipAddress: req.ip
-        },
-        referralCode
-      });
-
-      res.status(201).json({
-        success: true,
-        data: {
-          user: result.user,
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken
-        }
-      });
-    } catch (error) {
-      next(error);
     }
-  }
-
-  static async login(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        const firstError = errors.array()[0];
-        throw new ValidationError(firstError?.msg || 'Validation failed');
+    
+    // Create user
+    const user = new User({
+      email,
+      password,
+      referralCode: userReferralCode,
+      referredBy,
+      isEmailVerified: true // For now, skip email verification
+    });
+    
+    await user.save();
+    
+    // Generate tokens
+    const tokens = generateTokens(user._id.toString());
+    
+    // Return user data (without password)
+    const userData = {
+      id: user._id,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      currentBalance: user.currentBalance,
+      streakDays: user.streakDays,
+      referralCode: user.referralCode
+    };
+    
+    res.status(201).json({
+      message: 'User registered successfully',
+      data: {
+        user: userData,
+        ...tokens
       }
-
-      const { email, password, deviceInfo } = req.body;
-
-      const result = await AuthService.login({
-        email,
-        password,
-        deviceInfo: {
-          ...deviceInfo,
-          ipAddress: req.ip
-        }
-      });
-
-      res.json({
-        success: true,
-        data: {
-          user: result.user,
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken
-        }
-      });
-    } catch (error) {
-      next(error);
-    }
+    });
+    
+  } catch (error) {
+    logger.error('Registration error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
+};
 
-  static async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { refreshToken } = req.body;
-
-      if (!refreshToken) {
-        throw new ValidationError('Refresh token is required');
+// Login user
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Check if user is blocked
+    if (user.isBlocked) {
+      return res.status(403).json({ error: 'Account is blocked' });
+    }
+    
+    // Check if user is shadow banned
+    if (user.isShadowBanned) {
+      return res.status(403).json({ error: 'Account is suspended' });
+    }
+    
+    // Verify password
+    if (user.password) {
+      const isValidPassword = await user.comparePassword(password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
-
-      const result = await AuthService.refreshToken(refreshToken);
-
-      res.json({
-        success: true,
-        data: {
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken
-        }
-      });
-    } catch (error) {
-      next(error);
     }
-  }
-
-  static async logout(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    try {
-      // In a more sophisticated implementation, you might want to blacklist the token
-      // For now, we'll just return success
-      logger.info('User logged out', { userId: req.user?._id });
-
-      res.json({
-        success: true,
-        message: 'Logged out successfully'
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async magicLink(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { email } = req.body;
-
-      if (!email) {
-        throw new ValidationError('Email is required');
+    
+    // Update last login
+    user.lastLoginAt = new Date();
+    user.lastLoginIp = req.ip;
+    await user.save();
+    
+    // Generate tokens
+    const tokens = generateTokens(user._id.toString());
+    
+    // Return user data
+    const userData = {
+      id: user._id,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      currentBalance: user.currentBalance,
+      streakDays: user.streakDays,
+      referralCode: user.referralCode
+    };
+    
+    res.json({
+      message: 'Login successful',
+      data: {
+        user: userData,
+        ...tokens
       }
-
-      // Generate magic link token
-      const token = AuthService.generateMagicLinkToken(email);
-
-      // In a real implementation, you'd send this via email
-      // For now, we'll just return it (for testing purposes)
-      logger.info('Magic link requested', { email });
-
-      res.json({
-        success: true,
-        message: 'Magic link sent to your email',
-        data: {
-          token // Remove this in production
-        }
-      });
-    } catch (error) {
-      next(error);
-    }
+    });
+    
+  } catch (error) {
+    logger.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
+};
 
-  static async verifyMagicLink(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { token } = req.body;
-
-      if (!token) {
-        throw new ValidationError('Token is required');
+// Get user profile
+export const getProfile = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore - userId is set by auth middleware
+    const userId = req.userId;
+    
+    const user = await User.findById(userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      data: {
+        user: {
+          id: user._id,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          isEmailVerified: user.isEmailVerified,
+          currentBalance: user.currentBalance,
+          totalEarnings: user.totalEarnings,
+          totalWithdrawn: user.totalWithdrawn,
+          dailySpinCount: user.dailySpinCount,
+          streakDays: user.streakDays,
+          referralCode: user.referralCode,
+          referredBy: user.referredBy,
+          createdAt: user.createdAt
+        }
       }
-
-      const decoded = AuthService.verifyMagicLinkToken(token);
-      
-      // Find or create user
-      // This is a simplified implementation
-      res.json({
-        success: true,
-        message: 'Magic link verified successfully',
-        data: {
-          email: decoded.email
-        }
-      });
-    } catch (error) {
-      next(error);
-    }
+    });
+    
+  } catch (error) {
+    logger.error('Get profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
-// Validation middleware
-export const registerValidation = [
-  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
-  body('deviceInfo.fingerprintHash').notEmpty().withMessage('Device fingerprint is required'),
-  body('deviceInfo.model').notEmpty().withMessage('Device model is required'),
-  body('deviceInfo.os').notEmpty().withMessage('Device OS is required'),
-  body('deviceInfo.emulator').isBoolean().withMessage('Emulator flag must be boolean'),
-  body('deviceInfo.rooted').isBoolean().withMessage('Rooted flag must be boolean'),
-  body('referralCode').optional().isString().withMessage('Referral code must be string')
-];
+// Refresh token
+export const refreshToken = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token required' });
+    }
+    
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET) as any;
+    
+    if (decoded.type !== 'refresh') {
+      return res.status(401).json({ error: 'Invalid token type' });
+    }
+    
+    // Check if user exists
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    // Generate new tokens
+    const tokens = generateTokens(user._id.toString());
+    
+    res.json({
+      message: 'Token refreshed successfully',
+      data: {
+        ...tokens
+      }
+    });
+    
+  } catch (error) {
+    logger.error('Refresh token error:', error);
+    res.status(401).json({ error: 'Invalid refresh token' });
+  }
+};
 
-export const loginValidation = [
-  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
-  body('password').notEmpty().withMessage('Password is required'),
-  body('deviceInfo.fingerprintHash').notEmpty().withMessage('Device fingerprint is required'),
-  body('deviceInfo.model').notEmpty().withMessage('Device model is required'),
-  body('deviceInfo.os').notEmpty().withMessage('Device OS is required'),
-  body('deviceInfo.emulator').isBoolean().withMessage('Emulator flag must be boolean'),
-  body('deviceInfo.rooted').isBoolean().withMessage('Rooted flag must be boolean')
-];
+// Logout
+export const logout = async (req: Request, res: Response) => {
+  try {
+    // In a real implementation, you might want to blacklist the refresh token
+    // For now, just return success
+    res.json({ message: 'Logout successful' });
+  } catch (error) {
+    logger.error('Logout error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
