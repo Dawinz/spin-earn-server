@@ -1,6 +1,7 @@
 import express from 'express';
 import { getUsers, getWithdrawals, getAnalytics, updateUserStatus, getDailyStats, getConfig, updateConfig } from '../controllers/adminController.js';
 import { requireAdmin } from '../middleware/auth.js';
+import { configLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -14,9 +15,9 @@ router.get('/analytics/dashboard', getAnalytics); // Alias for dashboard
 router.get('/analytics/daily', getDailyStats); // Daily analytics
 router.put('/users/:userId/status', updateUserStatus);
 
-// Configuration routes
-router.get('/config/:key', getConfig);
-router.put('/config/:key', updateConfig);
+// Configuration routes with lenient rate limiting
+router.get('/config/:key', configLimiter, getConfig);
+router.put('/config/:key', configLimiter, updateConfig);
 
 // Add missing endpoints that frontend expects
 router.post('/users/:userId/block', async (req, res) => {
