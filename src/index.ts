@@ -21,6 +21,9 @@ import adminRoutes from './routes/admin.js';
 
 const app = express();
 
+// Trust proxy for rate limiting behind load balancers (Render)
+app.set('trust proxy', 1);
+
 // Connect to database
 connectDB();
 
