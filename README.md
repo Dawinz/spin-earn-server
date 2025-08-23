@@ -28,6 +28,7 @@ JWT_ACCESS_SECRET=your-access-secret
 JWT_REFRESH_SECRET=your-refresh-secret
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
+ALLOWED_ORIGINS=http://localhost:3000
 ```
 
 ## 🎯 Features
@@ -43,6 +44,11 @@ JWT_REFRESH_EXPIRES_IN=7d
 
 This repository is configured for Render deployment. Simply connect your GitHub repository to Render and it will automatically deploy.
 
+- **Build Command**: `npm ci && npm run build`
+- **Start Command**: `npm start`
+- **Node Version**: `20`
+- **Health Check Path**: `/healthz`
+
 ## 📊 Database Seeding
 
 ```bash
@@ -56,3 +62,8 @@ npm run seed
 - Input Validation
 - CORS Protection
 - Helmet Security Headers
+
+## Health Check
+
+- `GET /healthz` - Health check endpoint
+- `GET /api/v1/status` - API status
