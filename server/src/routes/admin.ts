@@ -62,4 +62,81 @@ router.post('/users/:userId/unblock', async (req, res) => {
   }
 });
 
+// Special endpoint to create admin users (requires secret key)
+router.post('/create-admin', async (req, res) => {
+  try {
+    const { email, password, secretKey } = req.body;
+    
+    // Verify secret key (this should be in environment variables)
+    if (secretKey !== 'spin-earn-admin-2024') {
+      return res.status(403).json({ error: 'Invalid secret key' });
+    }
+    
+    // Check if user already exists
+    const existingUser = await (await import('../models/User.js')).default.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+    
+    // Generate unique referral code
+    const { v4: uuidv4 } = await import('uuid');
+    const userReferralCode = uuidv4().substring(0, 8).toUpperCase();
+    
+    // Create admin user
+    const user = new (await import('../models/User.js')).default({
+      email,
+      password,
+      referralCode: userReferralCode,
+      isAdmin: true,
+      isEmailVerified: true,
+      currentBalance: 0,
+      totalEarnings: 0,
+      totalWithdrawn: 0,
+      dailySpinCount: 0,
+      streakDays: 0
+    });
+    
+    await user.save();
+    
+    // Generate tokens
+    const jwt = await import('jsonwebtoken');
+    const config = await import('../config/index.js');
+    
+    const accessToken = jwt.sign(
+      { userId: user._id.toString(), type: 'access' },
+      config.default.JWT_ACCESS_SECRET,
+      { expiresIn: '15m' }
+    );
+    
+    const refreshToken = jwt.sign(
+      { userId: user._id.toString(), type: 'refresh' },
+      config.default.JWT_REFRESH_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    // Return user data (without password)
+    const userData = {
+      id: user._id,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      currentBalance: user.currentBalance,
+      streakDays: user.streakDays,
+      referralCode: user.referralCode
+    };
+    
+    res.status(201).json({
+      message: 'Admin user created successfully',
+      data: {
+        user: userData,
+        accessToken,
+        refreshToken
+      }
+    });
+    
+  } catch (error) {
+    console.error('Create admin error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
